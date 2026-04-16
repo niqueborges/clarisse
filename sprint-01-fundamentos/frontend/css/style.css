@@ -1,0 +1,202 @@
+/* ─── Reset e base ─── */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f4f7f4;
+    color: #2d2d2d;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ─── Header ─── */
+header {
+    background-color: #2d5a3d;
+    color: white;
+    padding: 24px 32px;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 2em;
+    letter-spacing: 2px;
+}
+
+header .subtitulo {
+    font-size: 0.95em;
+    opacity: 0.8;
+    margin-top: 4px;
+}
+
+/* ─── Main ─── */
+main {
+    flex: 1;
+    max-width: 700px;
+    width: 100%;
+    margin: 32px auto;
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* ─── Card ─── */
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+}
+
+.card h2 {
+    font-size: 1.1em;
+    color: #2d5a3d;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e0ece3;
+}
+
+/* ─── Formulário ─── */
+.campo {
+    margin-bottom: 16px;
+}
+
+.campo label {
+    display: block;
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 6px;
+}
+
+.campo input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #cdd8ce;
+    border-radius: 8px;
+    font-size: 0.95em;
+    transition: border-color 0.2s;
+    background-color: #fafffe;
+}
+
+.campo input:focus {
+    outline: none;
+    border-color: #2d5a3d;
+}
+
+/* ─── Botões ─── */
+.botoes {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+button {
+    padding: 10px 22px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95em;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+button:not(.secundario) {
+    background-color: #2d5a3d;
+    color: white;
+}
+
+button:not(.secundario):hover {
+    background-color: #1e3f2b;
+}
+
+button.secundario {
+    background-color: #e8f0ea;
+    color: #2d5a3d;
+}
+
+button.secundario:hover {
+    background-color: #d0e4d5;
+}
+
+button.danger {
+    background-color: #fdecea;
+    color: #c0392b;
+    padding: 6px 14px;
+    font-size: 0.85em;
+}
+
+button.danger:hover {
+    background-color: #f5c6c2;
+}
+
+/* ─── Erro ─── */
+.erro {
+    background-color: #fdecea;
+    color: #c0392b;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    margin-bottom: 12px;
+}
+
+.hidden {
+    display: none;
+}
+
+/* ─── Lista de clientes ─── */
+.cliente-card {
+    border: 1px solid #e0ece3;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.cliente-info p {
+    font-size: 0.9em;
+    margin-bottom: 4px;
+    color: #444;
+}
+
+.cliente-info strong {
+    color: #2d2d2d;
+}
+
+.cliente-acoes {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.vazio {
+    color: #aaa;
+    font-size: 0.9em;
+    text-align: center;
+    padding: 20px 0;
+}
+
+/* ─── Footer ─── */
+footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 0.85em;
+    color: #888;
+}
+
+footer a {
+    color: #2d5a3d;
+    text-decoration: none;
+}
+
+footer a:hover {
+    text-decoration: underline;
+}
