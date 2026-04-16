@@ -1,11 +1,6 @@
-# models.py
-# Define a estrutura dos dados do Clarisse.
-# SQLAlchemy converte essa classe em uma tabela no banco SQLite.
-
 from sqlalchemy import Column, Integer, String, Date
 from sqlalchemy.orm import declarative_base
 
-# Base é a "classe mãe" de todos os modelos do projeto
 Base = declarative_base()
 
 class Cliente(Base):
