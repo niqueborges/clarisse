@@ -5,6 +5,4 @@ python-dotenv
 pydantic
 email-validator
 face_recognition
-deepface
 opencv-python-headless
-tf-keras
