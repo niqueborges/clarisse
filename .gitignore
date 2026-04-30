@@ -123,3 +123,8 @@ dmypy.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Custom ignores for ai_tool
+ai_tool
+ai_tool/__pycache__/
+ai_tool/*.pyc
