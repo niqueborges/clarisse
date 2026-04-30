@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+sqlalchemy
+python-dotenv
+pydantic
+email-validator
+face_recognition
