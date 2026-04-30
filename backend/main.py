@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.exc import IntegrityError
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from datetime import date, datetime
 from typing import Optional, List
 import shutil
@@ -11,15 +11,9 @@ import uuid
 import json
 from pathlib import Path
 
-from database import get_db, criar_tabelas
-from models import Cliente, AnaliseImagem
-from vision_service import analisar_imagem
-
-app = FastAPI(
-    title="Clarisse API",
-    description="API de cadastro de clientes — base do projeto Clarisse",
-    version="1.0.0"
-)
+from .database import get_db, criar_tabelas
+from .models import Cliente, AnaliseImagem
+from .vision_service import analisar_imagem
 
 # Criar tabelas no startup (evita efeitos colaterais em import)
 from contextlib import asynccontextmanager
@@ -29,11 +23,17 @@ async def lifespan(app: FastAPI):
     criar_tabelas()
     yield
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    title="Clarisse API",
+    description="API de cadastro de clientes — base do projeto Clarisse",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
 # ───────────── Configurações ─────────────
 
-UPLOADS_DIR = Path("uploads")
+BASE_DIR = Path(__file__).resolve().parent
+UPLOADS_DIR = BASE_DIR / "uploads"
 UPLOADS_DIR.mkdir(exist_ok=True)
 
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
@@ -88,7 +88,7 @@ class ClienteSimpleResponse(BaseModel):
 
 
 class ClienteDetailResponse(ClienteSimpleResponse):
-    analises: List[AnaliseResponse] = []
+    analises: List[AnaliseResponse] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
