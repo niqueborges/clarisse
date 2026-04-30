@@ -134,5 +134,8 @@ ai_tool/*.pyc
 .db
 db
 
+#
+uploads/
+
 
 
