@@ -128,3 +128,11 @@ Thumbs.db
 ai_tool
 ai_tool/__pycache__/
 ai_tool/*.pyc
+
+# 
+/.db
+.db
+db
+
+
+
