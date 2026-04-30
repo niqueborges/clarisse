@@ -21,39 +21,44 @@ rodando localmente ou em qualquer ambiente — sem cartão de crédito, sem lock
 
 ---
 
-## 🔄 AWS → Open Source: o mapeamento
+## ✨ Funcionalidades Atuais
+
+O projeto evoluiu para uma aplicação Full-Stack funcional, contendo:
+- **Gestão de Clientes:** Cadastro, listagem e exclusão de clientes (CRUD) armazenados em banco de dados relacional.
+- **Análise de Imagem (IA):** Upload de fotos com integração ao serviço de visão computacional para detecção facial e análise de emoções.
+- **Histórico de IA:** Registro das análises de cada cliente com métricas de confiança e emoções dominantes.
+- **Ferramenta de IA Auxiliar:** Um utilitário customizado (`ai_tool`) para gerar contexto de código, facilitando a interação com LLMs para a manutenção do projeto.
+
+---
+
+## 🔄 AWS → Open Source: O Mapeamento
 
 | Serviço AWS | Substituto utilizado |
 |---|---|
-| Amazon Rekognition | DeepFace / OpenCV |
-| AWS Polly | gTTS / Coqui TTS |
-| Amazon Transcribe | OpenAI Whisper (local) |
-| Amazon Lex | Rasa / LLM local |
-| Amazon S3 | Sistema de arquivos local |
-| DynamoDB | SQLite |
-| CloudWatch | Logging nativo Python |
-| Lambda / Serverless | FastAPI / Flask |
+| Amazon Rekognition | `face_recognition` (Python) |
+| Amazon S3 | Armazenamento de arquivos local (`/uploads`) |
+| DynamoDB | SQLite + SQLAlchemy |
+| Lambda / Serverless | FastAPI (Backend) |
+| Amazon Lex / Transcribe / Polly | *(Planejado para integrações futuras)* |
 
 ---
 
 ## 📁 Estrutura do projeto
 
+```text
 clarisse/
-├── sprint-01-fundamentos/
-├── sprint-02-03-api-visao/
-├── sprint-04-05-chatbot/
-├── sprint-06-07-voz/
-├── sprint-08-emocoes/
-└── sprint-09-10-projeto-final/
-
-Cada módulo tem seu próprio `README.md` explicando o que foi aprendido,
-o que foi substituído e como rodar.
+├── backend/           # API em FastAPI, Banco de dados (SQLite) e serviços de IA
+├── frontend/          # Interface do usuário (HTML, CSS, Vanilla JS)
+└── ai_tool/           # Ferramenta de construção de contexto para IA auxiliar
+```
 
 ---
 
 ## 🛠️ Tecnologias
 
-Python · FastAPI · OpenCV · DeepFace · Whisper · gTTS · SQLite · HTML · CSS · JavaScript
+**Backend:** Python · FastAPI · SQLAlchemy · SQLite · `face_recognition`  
+**Frontend:** HTML5 · CSS3 · JavaScript (Vanilla)  
+**Ferramentas:** Uvicorn · Pydantic
 
 ---
 
