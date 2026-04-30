@@ -2,10 +2,10 @@ from fastapi import FastAPI, Depends, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel, EmailStr
 from datetime import date, datetime
 from typing import Optional, List
-import os
 import shutil
 import uuid
 import json
@@ -15,24 +15,29 @@ from database import get_db, criar_tabelas
 from models import Cliente, AnaliseImagem
 from vision_service import analisar_imagem
 
-# Cria as tabelas no banco ao iniciar a aplicação
-# NOTA: Em um ambiente de produção, use uma ferramenta de migração como Alembic.
-criar_tabelas()
-
 app = FastAPI(
     title="Clarisse API",
     description="API de cadastro de clientes — base do projeto Clarisse",
     version="1.0.0"
 )
 
-# Diretório para uploads
+# Criar tabelas no startup (evita efeitos colaterais em import)
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    criar_tabelas()
+    yield
+
+app = FastAPI(lifespan=lifespan)
+
+# ───────────── Configurações ─────────────
+
 UPLOADS_DIR = Path("uploads")
 UPLOADS_DIR.mkdir(exist_ok=True)
 
-# Servir arquivos estáticos (imagens de upload)
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
-# CORS — permite que o frontend (navegador) converse com a API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -40,12 +45,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ─────────────────────────────────────────
-# Schemas Pydantic — validação dos dados
-# ─────────────────────────────────────────
+# ───────────── Schemas ─────────────
 
 class AnaliseResponse(BaseModel):
-    """Formato de resposta para uma análise de imagem."""
     id: int
     foto_path: str
     emocao_dominante: Optional[str] = None
@@ -57,7 +59,6 @@ class AnaliseResponse(BaseModel):
 
 
 class ClienteCreate(BaseModel):
-    """Dados obrigatórios para cadastrar um cliente."""
     nome: str
     data_nascimento: date
     telefone: str
@@ -66,7 +67,6 @@ class ClienteCreate(BaseModel):
 
 
 class ClienteUpdate(BaseModel):
-    """Todos os campos são opcionais na edição."""
     nome: Optional[str] = None
     data_nascimento: Optional[date] = None
     telefone: Optional[str] = None
@@ -75,7 +75,6 @@ class ClienteUpdate(BaseModel):
 
 
 class ClienteSimpleResponse(BaseModel):
-    """Formato de resposta para listagem de clientes (sem detalhes)."""
     id: int
     nome: str
     data_nascimento: date
@@ -84,143 +83,146 @@ class ClienteSimpleResponse(BaseModel):
     email: str
     foto_path: Optional[str] = None
 
+    class Config:
+        from_attributes = True
+
+
 class ClienteDetailResponse(ClienteSimpleResponse):
-    """Formato de resposta para um cliente (com detalhes de análises)."""
     analises: List[AnaliseResponse] = []
 
     class Config:
         from_attributes = True
 
-# ─────────────────────────────────────────
-# Rotas
-# ─────────────────────────────────────────
 
-@app.get("/", tags=["Status"])
+# ───────────── Rotas ─────────────
+
+@app.get("/")
 def status():
-    """Verifica se a API está no ar."""
-    return {"status": "🌿 Clarisse API online"}
+    return {"status": "Clarisse API online"}
 
 
-@app.post("/clientes", response_model=ClienteSimpleResponse, status_code=201, tags=["Clientes"])
+@app.post("/clientes", response_model=ClienteSimpleResponse, status_code=201)
 def cadastrar_cliente(cliente: ClienteCreate, db: Session = Depends(get_db)):
-    """Cadastra um novo cliente."""
-    existente = db.query(Cliente).filter(Cliente.email == cliente.email).first()
-    if existente:
+    novo = Cliente(**cliente.model_dump())
+
+    try:
+        db.add(novo)
+        db.commit()
+        db.refresh(novo)
+        return novo
+    except IntegrityError:
+        db.rollback()
         raise HTTPException(status_code=400, detail="Email já cadastrado.")
 
-    novo = Cliente(**cliente.model_dump())
-    db.add(novo)
-    db.commit()
-    db.refresh(novo)
-    return novo
 
-
-@app.get("/clientes", response_model=List[ClienteSimpleResponse], tags=["Clientes"])
+@app.get("/clientes", response_model=List[ClienteSimpleResponse])
 def listar_clientes(db: Session = Depends(get_db)):
-    """Retorna todos os clientes cadastrados."""
     return db.query(Cliente).all()
 
 
-@app.get("/clientes/{cliente_id}", response_model=ClienteDetailResponse, tags=["Clientes"])
+@app.get("/clientes/{cliente_id}", response_model=ClienteDetailResponse)
 def buscar_cliente(cliente_id: int, db: Session = Depends(get_db)):
-    """Busca um cliente pelo ID, incluindo seu histórico de análises."""
-    # Usar `selectinload` para carregar as análises de forma eficiente (evita N+1 queries)
-    cliente = db.query(Cliente).options(
-        selectinload(Cliente.analises)).filter(Cliente.id == cliente_id).first()
+    cliente = (
+        db.query(Cliente)
+        .options(selectinload(Cliente.analises))
+        .filter(Cliente.id == cliente_id)
+        .first()
+    )
+
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente não encontrado.")
+
     return cliente
 
 
-@app.put("/clientes/{cliente_id}", response_model=ClienteSimpleResponse, tags=["Clientes"])
+@app.put("/clientes/{cliente_id}", response_model=ClienteSimpleResponse)
 def editar_cliente(cliente_id: int, dados: ClienteUpdate, db: Session = Depends(get_db)):
-    """Edita os dados de um cliente existente."""
     cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente não encontrado.")
 
     for campo, valor in dados.model_dump(exclude_unset=True).items():
         setattr(cliente, campo, valor)
 
-    db.commit()
-    db.refresh(cliente)
-    return cliente
+    try:
+        db.commit()
+        db.refresh(cliente)
+        return cliente
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Email já cadastrado.")
 
 
-@app.delete("/clientes/{cliente_id}", status_code=200, tags=["Clientes"])
+@app.delete("/clientes/{cliente_id}")
 def excluir_cliente(cliente_id: int, db: Session = Depends(get_db)):
-    """Exclui um cliente pelo ID."""
     cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente não encontrado.")
 
     db.delete(cliente)
     db.commit()
-    return {"mensagem": f"Cliente '{cliente.nome}' excluído com sucesso."}
+    return {"mensagem": f"Cliente '{cliente.nome}' excluído."}
 
 
-# ─────────────────────────────────────────
-# Rotas de Análise de Imagem
-# ─────────────────────────────────────────
+# ───────────── Análise de imagem ─────────────
 
-@app.post("/clientes/{cliente_id}/analise", response_model=AnaliseResponse, tags=["Análises"])
+@app.post("/clientes/{cliente_id}/analise", response_model=AnaliseResponse)
 def analisar_foto_cliente(
     cliente_id: int,
-    db: Session = Depends(get_db),
-    foto: UploadFile = File(...)
+    foto: UploadFile = File(...),
+    db: Session = Depends(get_db)
 ):
-    """
-    Faz upload de uma foto, analisa as emoções e salva o resultado.
-    Atualiza a foto de perfil do cliente com a nova imagem.
-    """
     cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente não encontrado.")
 
-    # Salvar o arquivo com um nome único
-    file_extension = Path(foto.filename).suffix
-    file_name = f"{uuid.uuid4()}{file_extension}"
-    file_path = UPLOADS_DIR / file_name
+    extensao = Path(foto.filename).suffix or ".jpg"
+    nome_arquivo = f"{uuid.uuid4()}{extensao}"
+    caminho = UPLOADS_DIR / nome_arquivo
 
     try:
-        with file_path.open("wb") as buffer:
+        with caminho.open("wb") as buffer:
             shutil.copyfileobj(foto.file, buffer)
 
-        # Chamar o serviço de visão para analisar a imagem
-        resultado_analise = analisar_imagem(str(file_path.absolute()))
+        resultado = analisar_imagem(str(caminho))
 
-        if "erro" in resultado_analise:
-            raise HTTPException(status_code=400, detail=f"Erro na análise: {resultado_analise['erro']}")
+        if "erro" in resultado:
+            caminho.unlink(missing_ok=True)
+            raise HTTPException(status_code=400, detail=resultado["erro"])
 
-        # Salvar o resultado da análise no banco de dados
-        caminho_relativo = f"/{UPLOADS_DIR.name}/{file_name}"
+        caminho_relativo = f"/uploads/{nome_arquivo}"
+
         nova_analise = AnaliseImagem(
-            cliente_id=cliente_id,
+            cliente_id=cliente.id,
             foto_path=caminho_relativo,
-            emocao_dominante=resultado_analise.get("emocao_dominante"),
-            confianca_emocao=resultado_analise.get("confianca"),
-            resultado_completo=json.dumps(resultado_analise)
+            emocao_dominante=resultado.get("emocao_dominante"),
+            confianca_emocao=resultado.get("confianca"),
+            resultado_completo=json.dumps(resultado)
         )
-        db.add(nova_analise)
 
-        # Atualizar a foto de perfil do cliente
+        db.add(nova_analise)
         cliente.foto_path = caminho_relativo
 
         db.commit()
         db.refresh(nova_analise)
+
         return nova_analise
 
+    except HTTPException:
+        raise
     except Exception as e:
-        # Em caso de erro, remover o arquivo que pode ter sido salvo
-        if file_path.exists():
-            file_path.unlink()
-        raise HTTPException(status_code=500, detail=f"Falha no processamento do upload: {e}")
+        caminho.unlink(missing_ok=True)
+        raise HTTPException(status_code=500, detail=f"Erro no upload: {str(e)}")
 
 
-@app.get("/clientes/{cliente_id}/analises", response_model=List[AnaliseResponse], tags=["Análises"])
+@app.get("/clientes/{cliente_id}/analises", response_model=List[AnaliseResponse])
 def listar_analises_cliente(cliente_id: int, db: Session = Depends(get_db)):
-    """Lista todas as análises de imagem para um cliente específico."""
     cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente não encontrado.")
+
     return cliente.analises
