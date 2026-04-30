@@ -156,6 +156,82 @@ async function verAnalises(clienteId) {
     }
 }
 
+// ... (mantenha as constantes e funções listarClientes/cadastrarCliente que você já tem) ...
+
+// Função para abrir o seletor de arquivo e enviar a foto para análise
+async function analisarFoto(clienteId) {
+    // 1. Cria um input de arquivo temporário (invisível) para o usuário escolher a foto
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/jpeg, image/png, image/jpg';
+
+    // 2. Quando o usuário escolher o arquivo...
+    fileInput.onchange = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // O FormData é obrigatório para enviar arquivos (UploadFile no FastAPI)
+        const formData = new FormData();
+        formData.append('foto', file); // 'foto' é o nome exato do parâmetro no nosso main.py
+
+        // Dá um feedback visual para o usuário
+        const container = document.getElementById(`analises-${clienteId}`);
+        if(container) container.innerHTML = "<p>⏳ Analisando imagem com IA...</p>";
+
+        try {
+            // 3. Envia o POST para a nossa nova rota no backend
+            const response = await fetch(`${API}/clientes/${clienteId}/analise`, {
+                method: 'POST',
+                body: formData // Não colocamos Content-Type, o navegador ajusta sozinho para FormData
+            });
+
+            if (!response.ok) {
+                const erro = await response.json();
+                mostrarErro(erro.detail || 'Erro ao analisar a imagem.');
+                if(container) container.innerHTML = "<p class='erro'>❌ Falha na análise.</p>";
+                return;
+            }
+
+            const resultado = await response.json();
+            
+            // 4. Se deu certo, atualiza a lista para mostrar a nova foto/emoção
+            await listarClientes(); 
+
+            // Opcional: mostrar um alerta de sucesso
+            alert(`Análise concluída! Emoção detectada: ${resultado.emocao_dominante}`);
+
+        } catch (e) {
+            mostrarErro('Erro de conexão ao tentar enviar a imagem.');
+        }
+    };
+
+    // Abre a janelinha de escolha de arquivo do Windows/Mac
+    fileInput.click();
+}
+
+
+// Função para renderizar as análises dentro do card do cliente
+function renderizarAnalises(cliente) {
+    // Se o cliente não tiver análises (ou se a lista estiver vazia), mostra um texto padrão
+    if (!cliente.analises || cliente.analises.length === 0) {
+        return `<p class="sem-analise">Nenhuma análise de imagem registrada.</p>`;
+    }
+
+    // Pega a última análise feita (assumindo que queremos mostrar a mais recente)
+    const ultimaAnalise = cliente.analises[cliente.analises.length - 1];
+
+    // Monta o HTML com a foto e o resultado da emoção
+    return `
+        <div class="resultado-analise">
+            <img src="${API}${ultimaAnalise.foto_path}" alt="Foto analisada" class="foto-miniatura">
+            <div class="dados-emocao">
+                <p><strong>Emoção:</strong> <span class="badge-emocao">${ultimaAnalise.emocao_dominante}</span></p>
+                <p><small>Analisado em: ${new Date(ultimaAnalise.data_analise).toLocaleDateString('pt-BR')}</small></p>
+            </div>
+        </div>
+    `;
+}
+
 // ─── Utilitários ───
 function limparFormulario() {
     ['nome', 'dataNascimento', 'telefone', 'email'].forEach(id => {
