@@ -49,7 +49,6 @@ O projeto evoluiu para uma aplicação Full-Stack funcional, contendo:
 clarisse/
 ├── backend/           # API em FastAPI, Banco de dados (SQLite) e serviços de IA
 ├── frontend/          # Interface do usuário (HTML, CSS, Vanilla JS)
-└── ai_tool/           # Ferramenta de construção de contexto para IA auxiliar
 ```
 
 ---
@@ -62,7 +61,13 @@ clarisse/
 
 ---
 
+## Observações
+Arquivos gerados não são versionados (ignorados via .gitignore).
+
 ## 📜 Licença
 
 Projeto educacional e de portfólio, de autoria de **Monique da Silva Borges**.
 Baseado em trabalho coletivo do Programa de Bolsas Compass UOL 2024.
+Este projeto está sob a licença MIT.
+
+Veja o arquivo [LICENSE](./LICENSE).md para mais detalhes.
